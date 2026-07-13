@@ -23,12 +23,19 @@ Use this skill when working in this repository.
 - Use `async` Figma APIs where appropriate (for example `getLocalVariableCollectionsAsync`).
 - Log useful progress and failures with `console.log`, `console.warn`, and `console.error`.
 - Avoid dependencies and build steps.
+- For every script, provide a brief description of its purpose and usage in the header comment.
+- For every script, provide a console.clear() at the start of execution to reduce noise in the console.
 
 ## Scripter Window Caveat
 
 - `createWindow` callbacks may run in an isolated context.
 - Do not rely on outer-scope helper functions inside window callbacks.
 - Define callback-local helpers when messaging between script and window.
+
+## References
+
+- Primary Scripter reference: https://scripter.rsms.me/
+- Use this skill's repo-specific conventions first. Use the Scripter reference to confirm runtime behavior, available globals, and supported APIs.
 
 ## Style Expectations
 
