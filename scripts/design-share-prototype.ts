@@ -1,3 +1,8 @@
+// Figma Scripter snippet:
+// Reorders selected frames left-to-right, aligns and renames them,
+// creates a flow starting point from the first selected frame name,
+// and links each frame to the next via on-click navigation.
+
 declare const figma: any;
 
 type FrameNode = any;
@@ -8,7 +13,18 @@ type Reaction = any;
 
 type SelectedFrame = FrameNode;
 
-const FLOW_START_NAME = "GDS";
+const CONFIG = {
+  defaultFlowStartName: "GDS",
+};
+
+function normalizeFlowStartName(value: any): string {
+  const normalized = String(value || "").trim();
+  return normalized.length > 0 ? normalized : CONFIG.defaultFlowStartName;
+}
+
+function deriveFlowStartName(startFrame: SelectedFrame): string {
+  return normalizeFlowStartName(startFrame?.name);
+}
 
 function getAbsoluteX(node: SceneNode): number {
   return node.absoluteTransform[0][2];
@@ -199,22 +215,28 @@ function run(): void {
   }
 
   reorderFramesLeftToRightInLayerList(framesSortedLeftToRight);
+  const flowStartName = deriveFlowStartName(framesSortedLeftToRight[0]);
   renameFrames(framesSortedLeftToRight);
   const flowStartSet = setFlowStartingPoint(
     framesSortedLeftToRight[0],
-    FLOW_START_NAME,
+    flowStartName,
   );
   connectFramesWithOnClickNavigate(framesSortedLeftToRight);
 
   if (flowStartSet) {
     figma.notify(
-      `Processed ${framesSortedLeftToRight.length} frames: reordered, renamed, flow start \"${FLOW_START_NAME}\" set, and linked.`,
+      `Processed ${framesSortedLeftToRight.length} frames: reordered, renamed, flow start \"${flowStartName}\" set, and linked.`,
     );
   } else {
     figma.notify(
-      `Processed ${framesSortedLeftToRight.length} frames: reordered, renamed, and linked (flow start \"${FLOW_START_NAME}\" unsupported in this runtime).`,
+      `Processed ${framesSortedLeftToRight.length} frames: reordered, renamed, and linked (flow start \"${flowStartName}\" unsupported in this runtime).`,
     );
   }
 }
 
-run();
+try {
+  run();
+} catch (error) {
+  console.error(error);
+  figma.notify("Script failed. See console for details.");
+}
