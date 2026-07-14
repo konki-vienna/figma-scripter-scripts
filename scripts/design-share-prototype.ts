@@ -87,14 +87,22 @@ function reorderFramesLeftToRightInLayerList(frames: SelectedFrame[]): void {
 }
 
 function renameFrames(framesSortedLeftToRight: SelectedFrame[]): void {
+  if (framesSortedLeftToRight.length === 0) {
+    return;
+  }
+
+  const firstName = framesSortedLeftToRight[0].name;
+
   const now = new Date();
   const year = now.getFullYear();
   const month = getMonthTwoLetters(now);
+  const day = String(now.getDate()).padStart(2, "0");
 
-  framesSortedLeftToRight.forEach((frame, index) => {
-    const num = padNumber(index + 1, 1);
-    frame.name = `${year}_${month}_${num}`;
-  });
+  for (let i = 1; i < framesSortedLeftToRight.length; i++) {
+    const num = padNumber(i, 2);
+    framesSortedLeftToRight[i].name =
+      `${firstName}-${num}_${year}_${month}_${day}`;
+  }
 }
 
 function repositionFrames(framesSortedLeftToRight: SelectedFrame[]): boolean {
