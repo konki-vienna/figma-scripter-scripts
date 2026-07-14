@@ -234,6 +234,7 @@ function run(): void {
   if (flowStartSet) {
     figma.notify(
       `Processed ${framesSortedLeftToRight.length} frames: reordered, renamed, flow start \"${flowStartName}\" set, and linked.`,
+      { timeout: Infinity },
     );
   } else {
     figma.notify(
