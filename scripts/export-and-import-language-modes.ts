@@ -1,6 +1,7 @@
 // Figma Scripter snippet:
 // Single-script flow for export and import of language variable values.
-// Export writes JSON to Console. Import can read JSON from a paste UI window.
+// Export opens a copy UI window (or falls back to Console).
+// Import can read JSON from a paste UI window.
 
 declare const createWindow: any;
 
@@ -62,7 +63,11 @@ declare const createWindow: any;
       width: 620,
       height: 500,
     },
-    notifyTimeoutMs: 10000,
+    exportWindow: {
+      width: 700,
+      height: 560,
+    },
+    notifyTimeoutMs: Infinity,
   };
 
   type ExportRow = {
@@ -385,6 +390,136 @@ declare const createWindow: any;
     });
   }
 
+  async function showExportJsonInWindow(jsonText: string): Promise<boolean> {
+    if (typeof createWindowApi !== "function") {
+      return false;
+    }
+
+    const win = createWindowApi(
+      {
+        width: CONFIG.exportWindow.width,
+        height: CONFIG.exportWindow.height,
+      },
+      (w: any) => {
+        const root = w.document.createElement("div");
+        root.style.display = "flex";
+        root.style.flexDirection = "column";
+        root.style.gap = "8px";
+        root.style.padding = "12px";
+        root.style.font = "12px -apple-system, BlinkMacSystemFont, sans-serif";
+
+        const title = w.document.createElement("div");
+        title.textContent = "Export translations JSON";
+        title.style.fontWeight = "600";
+
+        const info = w.document.createElement("div");
+        info.textContent =
+          "Copy this JSON and paste it into your translator/import workflow.";
+
+        const textarea = w.document.createElement("textarea");
+        textarea.style.width = "100%";
+        textarea.style.height = "400px";
+        textarea.style.boxSizing = "border-box";
+        textarea.readOnly = true;
+        textarea.placeholder = "Waiting for export JSON from host script...";
+
+        const row = w.document.createElement("div");
+        row.style.display = "flex";
+        row.style.gap = "8px";
+
+        const status = w.document.createElement("div");
+        status.style.color = "#666";
+        status.textContent = "Ready";
+
+        const copyButton = w.document.createElement("button");
+        copyButton.textContent = "Copy JSON";
+        copyButton.onclick = async () => {
+          textarea.focus();
+          textarea.select();
+
+          let copied = false;
+
+          try {
+            if (w.navigator?.clipboard?.writeText) {
+              await w.navigator.clipboard.writeText(
+                String(textarea.value || ""),
+              );
+              copied = true;
+            }
+          } catch {
+            // Ignore and continue with legacy fallback.
+          }
+
+          if (!copied) {
+            try {
+              copied =
+                typeof w.document.execCommand === "function" &&
+                w.document.execCommand("copy");
+            } catch {
+              copied = false;
+            }
+          }
+
+          status.textContent = copied
+            ? "Copied to clipboard."
+            : "Clipboard blocked. Use Cmd+C after selecting the text.";
+        };
+
+        const closeButton = w.document.createElement("button");
+        closeButton.textContent = "Close";
+        closeButton.onclick = () => {
+          if (typeof w.close === "function") {
+            w.close();
+          }
+        };
+
+        const handleMessage = (ev: any) => {
+          const data = ev?.data ?? ev ?? {};
+          if (data?.type !== "export_json_payload") {
+            return;
+          }
+
+          const value = typeof data.json === "string" ? data.json : "";
+          textarea.value = value;
+          textarea.focus();
+          textarea.select();
+          status.textContent = value
+            ? "JSON loaded. Click Copy JSON or press Cmd+C."
+            : "No JSON payload received.";
+        };
+
+        if (typeof w.addEventListener === "function") {
+          w.addEventListener("message", handleMessage);
+        }
+        w.onmessage = handleMessage;
+
+        row.appendChild(copyButton);
+        row.appendChild(closeButton);
+        root.appendChild(title);
+        root.appendChild(info);
+        root.appendChild(textarea);
+        root.appendChild(row);
+        root.appendChild(status);
+
+        w.document.body.innerHTML = "";
+        w.document.body.appendChild(root);
+      },
+    );
+
+    if (!win) {
+      return false;
+    }
+
+    const payload = { type: "export_json_payload", json: jsonText };
+    // The bridge may not be ready immediately after opening.
+    sendMessage(win, payload);
+    setTimeout(() => sendMessage(win, payload), 30);
+    setTimeout(() => sendMessage(win, payload), 150);
+    setTimeout(() => sendMessage(win, payload), 350);
+
+    return true;
+  }
+
   function asStringValue(value: any): string | null {
     return typeof value === "string" ? value : null;
   }
@@ -630,12 +765,18 @@ declare const createWindow: any;
     };
 
     const json = JSON.stringify(payload, null, 2);
-    console.log("===== MISSING TRANSLATIONS JSON START =====");
-    console.log(json);
-    console.log("===== MISSING TRANSLATIONS JSON END =====");
+    const openedWindow = await showExportJsonInWindow(json);
+
+    if (!openedWindow) {
+      console.log("===== MISSING TRANSLATIONS JSON START =====");
+      console.log(json);
+      console.log("===== MISSING TRANSLATIONS JSON END =====");
+    }
 
     figmaApi.notify(
-      `Found ${rows.length} missing translations across ${targetModes.length} target language mode(s). ${formatModeCountSummary(countByMode)}. JSON is in Console.`,
+      openedWindow
+        ? `Found ${rows.length} missing translations across ${targetModes.length} target language mode(s). ${formatModeCountSummary(countByMode)}. JSON window opened.`
+        : `Found ${rows.length} missing translations across ${targetModes.length} target language mode(s). ${formatModeCountSummary(countByMode)}. JSON is in Console.`,
       { timeout: CONFIG.notifyTimeoutMs },
     );
   }
