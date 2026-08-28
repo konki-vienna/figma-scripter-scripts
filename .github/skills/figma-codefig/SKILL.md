@@ -26,6 +26,7 @@ Use this skill when working with CodeFig scripts in this repository.
 - In dynamic-page contexts, call `await figma.loadAllPagesAsync()` before using `figma.root.findOne`, `figma.root.findAll`, or cross-page component lookups.
 - Log useful progress and failures with `console.log`, `console.warn`, and `console.error`.
 - Guard console calls in CodeFig scripts (`typeof console?.method === "function"`) before invoking `console.clear`, `console.log`, `console.warn`, or `console.error`.
+- For user input, prefer guarded `prompt()` usage (`typeof prompt === "function"`) with clear cancel handling (`null` => abort flow).
 - Avoid dependencies and build steps unless explicitly requested.
 - For every script, provide a brief description of its purpose and usage in the header comment.
 - For every script, provide a `console.clear()` at the start of execution to reduce noise in the console.
@@ -37,8 +38,16 @@ Use this skill when working with CodeFig scripts in this repository.
 - Fail fast with actionable error messages when required context is missing.
 - `figma.closePlugin` may be unavailable in some CodeFig contexts; guard calls before invoking.
 - Some embedded runtimes may provide a partial `console`; avoid direct unguarded console method calls.
+- Some CodeFig contexts may not expose `prompt()`; fail with a clear message when interactive input is required.
 - With `documentAccess: dynamic-page`, direct current-page assignment can fail; prefer async page switching and then query nodes from the resolved page reference.
 - With `documentAccess: dynamic-page`, root-level searches can fail unless all pages were loaded first.
+
+## Recommended Startup Sequence
+
+- Add a bootstrap helper at the start of each script run (for example `bootstrapFigmaContext()`).
+- In that helper, run `await figma.loadAllPagesAsync()` once before any root-level lookup.
+- Keep page switching behind one helper (for example `setCurrentPageSafe`) that prefers `await figma.setCurrentPageAsync(page)`.
+- Call the bootstrap helper as the first line inside `run()`.
 
 ## References
 
