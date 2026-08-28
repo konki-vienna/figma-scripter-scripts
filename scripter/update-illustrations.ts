@@ -353,9 +353,7 @@
     figma.currentPage.selection = [insertedLogEntry];
     figma.viewport.scrollAndZoomIntoView([insertedLogEntry]);
 
-    figma.notify(
-      "Done. Changelog-Entry erstellt: " + selectedComponents.length,
-    );
+    figma.notify("Done. Changelog-Entry created: " + selectedComponents.length);
     figma.closePlugin();
   }
 
